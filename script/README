@@ -13,7 +13,7 @@ Analysis code for the master's thesis:
 | Script | Description | Thesis section |
 |--------|-------------|----------------|
 | `tox_screen_plotting.R` | CellTiter-Glo viability analysis and plotting for doxycycline and trimethoprim toxicity screen | 2.9, 3.2 |
-| `MOI Titration Curves Calc.R` | MOI estimation from puromycin-resistant survival after lentiviral transduction | 2.6, 3.1 |
+| `moi_titration.R` | MOI estimation from puromycin-resistant survival after lentiviral transduction | 2.6, 3.1 |
 | `induction_validation_script.R` | qPCR fold-change analysis for CRISPRi/a induction validation | 2.7, 3.3 |
 | `full_qpcr_dosage_titration_pipeline.R` | ΔCq, ΔΔCq, fold-change calculation, cross-plate normalisation, and Hill curve fitting for CD46 and GFI1B dose-response | 2.8, 2.15, 3.4 |
 | `facs_pipeline.R` | FCS file import, sequential gating, tdTomato-positive cell retention, and CD46 APC surface expression quantification | 2.13, 3.5 |
