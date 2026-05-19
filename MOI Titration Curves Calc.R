@@ -1,6 +1,6 @@
 library(tidyverse)
 
-# 1. Input the New Data from your latest results
+# 1. Input Data
 # vol_n1 corresponds to -1, vol_n2 to -2, etc.
 df_raw <- tribble(
   ~condition,       ~target_gene, ~vol_10, ~vol_1, ~vol_n1, ~vol_n2, ~vol_n3, ~vol_n4, ~vol_n5, ~no_virus, ~no_puro,
@@ -364,235 +364,235 @@ ggsave(
 
 
 
-
-# ============================================================================
-# Compare MOI plots: linear y-axis vs log y-axis
-# ============================================================================
-
-library(tidyverse)
-library(patchwork)
-
-# X-axis setup
-axis_breaks <- c(10, 1, 0.1, 0.01, 0.001, 0.0001, 0.00001)
-
-axis_labels <- c(
-  "10",
-  "1",
-  expression(10^-1),
-  expression(10^-2),
-  expression(10^-3),
-  expression(10^-4),
-  expression(10^-5)
-)
-
-# Y-axis setup for log-scale MOI
-y_axis_breaks <- c(0.001, 0.01, 0.1, 0.2, 0.4, 1, 3, 10)
-
-y_axis_labels <- c(
-  "0.001",
-  "0.01",
-  "0.1",
-  "0.2",
-  "0.4",
-  "1",
-  "3",
-  "10"
-)
-
-# ============================================================================
-# Linear y-axis version
-# ============================================================================
-
-plot_moi_summary_linear <- function(sys_name) {
-  
-  target_colors <- if (sys_name == "CRISPRa") {
-    c(
-      "NTC" = "darkseagreen2",
-      "GFI1B" = "darkseagreen4",
-      "CD46" = "darkseagreen3"
-    )
-  } else {
-    c(
-      "NTC" = "#f4a3a8",
-      "GFI1B" = "#8b3058",
-      "CD46" = "#cc607d"
-    )
-  }
-  
-  moi_summary %>%
-    filter(system == sys_name) %>%
-    ggplot(
-      aes(
-        x = volume_ul,
-        y = mean_moi,
-        color = target_gene,
-        group = target_gene
-      )
-    ) +
-    annotate(
-      "rect",
-      xmin = 1e-5,
-      xmax = 10,
-      ymin = 0.2,
-      ymax = 0.4,
-      fill = "gray85",
-      alpha = 0.5
-    ) +
-    geom_hline(
-      yintercept = c(0.2, 0.4),
-      linetype = "dashed",
-      color = "gray40",
-      linewidth = 0.5
-    ) +
-    geom_line(linewidth = 0.8) +
-    geom_point(size = 2.5) +
-    geom_errorbar(
-      aes(
-        ymin = pmax(mean_moi - se_moi, 0),
-        ymax = mean_moi + se_moi
-      ),
-      width = 0.05,
-      linewidth = 0.4
-    ) +
-    scale_x_log10(
-      breaks = axis_breaks,
-      labels = axis_labels
-    ) +
-    scale_color_manual(values = target_colors) +
-    labs(
-      x = "Lentiviral input (µL)",
-      y = "Estimated MOI",
-      color = "Guide target"
-    ) +
-    theme_nathan()
-}
-
-# ============================================================================
-# Log y-axis version
-# Important: log axes cannot display 0, so a small plotting floor is used.
-# This only affects visualization, not the calculated MOI values.
-# ============================================================================
-
-plot_moi_summary_log <- function(sys_name) {
-  
-  target_colors <- if (sys_name == "CRISPRa") {
-    c(
-      "NTC" = "darkseagreen2",
-      "GFI1B" = "darkseagreen4",
-      "CD46" = "darkseagreen3"
-    )
-  } else {
-    c(
-      "NTC" = "#f4a3a8",
-      "GFI1B" = "#8b3058",
-      "CD46" = "#cc607d"
-    )
-  }
-  
-  moi_summary %>%
-    filter(system == sys_name) %>%
-    mutate(
-      mean_moi_plot = pmax(mean_moi, 0.001),
-      ymin_moi_plot = pmax(mean_moi - se_moi, 0.001),
-      ymax_moi_plot = pmax(mean_moi + se_moi, 0.001)
-    ) %>%
-    ggplot(
-      aes(
-        x = volume_ul,
-        y = mean_moi_plot,
-        color = target_gene,
-        group = target_gene
-      )
-    ) +
-    annotate(
-      "rect",
-      xmin = 1e-5,
-      xmax = 10,
-      ymin = 0.2,
-      ymax = 0.4,
-      fill = "gray85",
-      alpha = 0.5
-    ) +
-    geom_hline(
-      yintercept = c(0.2, 0.4),
-      linetype = "dashed",
-      color = "gray40",
-      linewidth = 0.5
-    ) +
-    geom_line(linewidth = 0.8) +
-    geom_point(size = 2.5) +
-    geom_errorbar(
-      aes(
-        ymin = ymin_moi_plot,
-        ymax = ymax_moi_plot
-      ),
-      width = 0.05,
-      linewidth = 0.4
-    ) +
-    scale_x_log10(
-      breaks = axis_breaks,
-      labels = axis_labels
-    ) +
-    scale_y_log10(
-      breaks = y_axis_breaks,
-      labels = y_axis_labels
-    ) +
-    scale_color_manual(values = target_colors) +
-    labs(
-      x = "Lentiviral input (µL)",
-      y = "Estimated MOI (log scale)",
-      color = "Guide target"
-    ) +
-    theme_nathan()
-}
-
-# ============================================================================
-# Generate comparison plots
-# ============================================================================
-
-plot_a_linear <- plot_moi_summary_linear("CRISPRa")
-plot_a_log <- plot_moi_summary_log("CRISPRa")
-
-plot_i_linear <- plot_moi_summary_linear("CRISPRi")
-plot_i_log <- plot_moi_summary_log("CRISPRi")
-
-# Side-by-side comparison
-moi_crispra_compare <- plot_a_linear + plot_a_log
-moi_crispri_compare <- plot_i_linear + plot_i_log
-
-print(moi_crispra_compare)
-print(moi_crispri_compare)
-
-# ============================================================================
-# Save comparison plots
-# ============================================================================
-
-ggsave(
-  "CRISPRa_MOI_og_yaxis.png",
-  plot = plot_a_log,
-  width = 12,
-  height = 5,
-  dpi = 300
-)
-
-ggsave(
-  "CRISPRa_MOI_log_yaxis.pdf",
-  plot = plot_a_log,
-  width = 12,
-  height = 5
-)
-
-ggsave(
-  "CRISPRi_MOI_linear_yaxis.png",
-  plot = plot_i_log,
-  width = 12,
-  height = 5,
-  dpi = 300
-)
-
-ggsave(
-  "CRISPRi_MOI_linear_yaxis.pdf",
-  plot = plot_i_log,
-  width = 12,
-  height = 5
-)
+# 
+# # ============================================================================
+# # Compare MOI plots: linear y-axis vs log y-axis
+# # ============================================================================
+# 
+# library(tidyverse)
+# library(patchwork)
+# 
+# # X-axis setup
+# axis_breaks <- c(10, 1, 0.1, 0.01, 0.001, 0.0001, 0.00001)
+# 
+# axis_labels <- c(
+#   "10",
+#   "1",
+#   expression(10^-1),
+#   expression(10^-2),
+#   expression(10^-3),
+#   expression(10^-4),
+#   expression(10^-5)
+# )
+# 
+# # Y-axis setup for log-scale MOI
+# y_axis_breaks <- c(0.001, 0.01, 0.1, 0.2, 0.4, 1, 3, 10)
+# 
+# y_axis_labels <- c(
+#   "0.001",
+#   "0.01",
+#   "0.1",
+#   "0.2",
+#   "0.4",
+#   "1",
+#   "3",
+#   "10"
+# )
+# 
+# # ============================================================================
+# # Linear y-axis version
+# # ============================================================================
+# 
+# plot_moi_summary_linear <- function(sys_name) {
+#   
+#   target_colors <- if (sys_name == "CRISPRa") {
+#     c(
+#       "NTC" = "darkseagreen2",
+#       "GFI1B" = "darkseagreen4",
+#       "CD46" = "darkseagreen3"
+#     )
+#   } else {
+#     c(
+#       "NTC" = "#f4a3a8",
+#       "GFI1B" = "#8b3058",
+#       "CD46" = "#cc607d"
+#     )
+#   }
+#   
+#   moi_summary %>%
+#     filter(system == sys_name) %>%
+#     ggplot(
+#       aes(
+#         x = volume_ul,
+#         y = mean_moi,
+#         color = target_gene,
+#         group = target_gene
+#       )
+#     ) +
+#     annotate(
+#       "rect",
+#       xmin = 1e-5,
+#       xmax = 10,
+#       ymin = 0.2,
+#       ymax = 0.4,
+#       fill = "gray85",
+#       alpha = 0.5
+#     ) +
+#     geom_hline(
+#       yintercept = c(0.2, 0.4),
+#       linetype = "dashed",
+#       color = "gray40",
+#       linewidth = 0.5
+#     ) +
+#     geom_line(linewidth = 0.8) +
+#     geom_point(size = 2.5) +
+#     geom_errorbar(
+#       aes(
+#         ymin = pmax(mean_moi - se_moi, 0),
+#         ymax = mean_moi + se_moi
+#       ),
+#       width = 0.05,
+#       linewidth = 0.4
+#     ) +
+#     scale_x_log10(
+#       breaks = axis_breaks,
+#       labels = axis_labels
+#     ) +
+#     scale_color_manual(values = target_colors) +
+#     labs(
+#       x = "Lentiviral input (µL)",
+#       y = "Estimated MOI",
+#       color = "Guide target"
+#     ) +
+#     theme_nathan()
+# }
+# 
+# # ============================================================================
+# # Log y-axis version
+# # Important: log axes cannot display 0, so a small plotting floor is used.
+# # This only affects visualization, not the calculated MOI values.
+# # ============================================================================
+# 
+# plot_moi_summary_log <- function(sys_name) {
+#   
+#   target_colors <- if (sys_name == "CRISPRa") {
+#     c(
+#       "NTC" = "darkseagreen2",
+#       "GFI1B" = "darkseagreen4",
+#       "CD46" = "darkseagreen3"
+#     )
+#   } else {
+#     c(
+#       "NTC" = "#f4a3a8",
+#       "GFI1B" = "#8b3058",
+#       "CD46" = "#cc607d"
+#     )
+#   }
+#   
+#   moi_summary %>%
+#     filter(system == sys_name) %>%
+#     mutate(
+#       mean_moi_plot = pmax(mean_moi, 0.001),
+#       ymin_moi_plot = pmax(mean_moi - se_moi, 0.001),
+#       ymax_moi_plot = pmax(mean_moi + se_moi, 0.001)
+#     ) %>%
+#     ggplot(
+#       aes(
+#         x = volume_ul,
+#         y = mean_moi_plot,
+#         color = target_gene,
+#         group = target_gene
+#       )
+#     ) +
+#     annotate(
+#       "rect",
+#       xmin = 1e-5,
+#       xmax = 10,
+#       ymin = 0.2,
+#       ymax = 0.4,
+#       fill = "gray85",
+#       alpha = 0.5
+#     ) +
+#     geom_hline(
+#       yintercept = c(0.2, 0.4),
+#       linetype = "dashed",
+#       color = "gray40",
+#       linewidth = 0.5
+#     ) +
+#     geom_line(linewidth = 0.8) +
+#     geom_point(size = 2.5) +
+#     geom_errorbar(
+#       aes(
+#         ymin = ymin_moi_plot,
+#         ymax = ymax_moi_plot
+#       ),
+#       width = 0.05,
+#       linewidth = 0.4
+#     ) +
+#     scale_x_log10(
+#       breaks = axis_breaks,
+#       labels = axis_labels
+#     ) +
+#     scale_y_log10(
+#       breaks = y_axis_breaks,
+#       labels = y_axis_labels
+#     ) +
+#     scale_color_manual(values = target_colors) +
+#     labs(
+#       x = "Lentiviral input (µL)",
+#       y = "Estimated MOI (log scale)",
+#       color = "Guide target"
+#     ) +
+#     theme_nathan()
+# }
+# 
+# # ============================================================================
+# # Generate comparison plots
+# # ============================================================================
+# 
+# plot_a_linear <- plot_moi_summary_linear("CRISPRa")
+# plot_a_log <- plot_moi_summary_log("CRISPRa")
+# 
+# plot_i_linear <- plot_moi_summary_linear("CRISPRi")
+# plot_i_log <- plot_moi_summary_log("CRISPRi")
+# 
+# # Side-by-side comparison
+# moi_crispra_compare <- plot_a_linear + plot_a_log
+# moi_crispri_compare <- plot_i_linear + plot_i_log
+# 
+# print(moi_crispra_compare)
+# print(moi_crispri_compare)
+# 
+# # ============================================================================
+# # Save comparison plots
+# # ============================================================================
+# 
+# ggsave(
+#   "CRISPRa_MOI_og_yaxis.png",
+#   plot = plot_a_log,
+#   width = 12,
+#   height = 5,
+#   dpi = 300
+# )
+# 
+# ggsave(
+#   "CRISPRa_MOI_log_yaxis.pdf",
+#   plot = plot_a_log,
+#   width = 12,
+#   height = 5
+# )
+# 
+# ggsave(
+#   "CRISPRi_MOI_linear_yaxis.png",
+#   plot = plot_i_log,
+#   width = 12,
+#   height = 5,
+#   dpi = 300
+# )
+# 
+# ggsave(
+#   "CRISPRi_MOI_linear_yaxis.pdf",
+#   plot = plot_i_log,
+#   width = 12,
+#   height = 5
+# )
